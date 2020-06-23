@@ -1,17 +1,17 @@
-function putIfNotExists(itemToCreate, query) {
-  var container = getContext().getCollection();
-
-  var isAccepted = container.queryDocuments(
-      container.getSelfLink(),
+function putIfNotExists(item, query) {
+  var isAccepted = __.queryDocuments(
+      __.getSelfLink(),
       query,
       function (err, items, options) {
           if (err) throw err;
 
           if (!items || !items.length) {
-            var accepted = container.createDocument(container.getSelfLink(), itemToCreate);
+            var accepted = __.createDocument(__.getSelfLink(), item);
             if (!accepted) throw new Error("Failed to insert");
+            getContext().getResponse().setBody(true);
           } else {
-            throw new Error("Already exists");
+            // The specified record already exists
+            getContext().getResponse().setBody(false);
           }
       });
   if (!isAccepted) throw new Error("The query was not accepted by the server.");

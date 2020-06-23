@@ -15,8 +15,8 @@
 (def ^:const ^String METADATA_CONTAINER "metadata")
 (def ^:const ^String METADATA_PARTITION_KEY "/id")
 
-(def ^:const ^String CONTAINER_PARTITION_KEY "/concatPartitionKey")
-(def ^:const ^String PARTITION_KEY_PATH "/concatPartitionKey/?")
+(def ^:const ^String CONTAINER_PARTITION_KEY "/concatenatedPartitionKey")
+(def ^:const ^String PARTITION_KEY_PATH "/concatenatedPartitionKey/?")
 (def ^:const ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
 
 (def ^:const ^String STORED_PROCEDURE_DIR "stored-procedure/")

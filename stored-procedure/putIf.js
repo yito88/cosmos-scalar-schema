@@ -1,4 +1,4 @@
-function putIf(itemToUpdate, query) {
+function putIf(item, query) {
 
   function merge(source, update) {
     for (var column in update) {
@@ -12,10 +12,8 @@ function putIf(itemToUpdate, query) {
     return source;
   }
 
-  var container = getContext().getCollection();
-
-  var isAccepted = container.queryDocuments(
-      container.getSelfLink(),
+  var isAccepted = __.queryDocuments(
+      __.getSelfLink(),
       query,
       function (err, items, options) {
           if (err) throw err;
@@ -26,7 +24,7 @@ function putIf(itemToUpdate, query) {
             return;
           } else {
             if (items.length != 1) throw new Error("Unable to put for multiple records.");
-            var accepted = container.replaceDocument(items[0]._self, merge(items[0], itemToUpdate));
+            var accepted = __.replaceDocument(items[0]._self, merge(items[0], item));
             if (!accepted) throw new Error("Failed to update.");
             getContext().getResponse().setBody(true);
           }

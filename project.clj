@@ -2,6 +2,7 @@
   :description "Schema tool for Scalar DB on Cosmos DB"
   :url "http://github.com/yito88/cosmos-scalar-schema"
   :dependencies [[org.clojure/clojure "1.10.1"]
-                 [com.azure/azure-cosmos "4.0.1"]]
+                 [com.azure/azure-cosmos "4.0.1"]
+                 [com.google.guava/guava "24.1-jre"]]
   :java-source-paths ["java/src"]
   :repl-options {:init-ns cosmos-scalar-schema.core})
