@@ -35,6 +35,20 @@
                               "c5" "boolean"}
                     :ru 400})
 
+(def COORDINATOR_SCHEMA {:database "coordinator"
+                         :table "state"
+                         :partition-key #{"tx_id"}
+                         :clustering-key #{}
+                         :columns {"tx_id" "text"
+                                   "tx_state" "int"
+                                   "tx_created_at" "bigint"}})
+
+(def TRANSACTION_METADATA_COLUMNS {"tx_committed_at" "bigint"
+                                   "tx_id" "text"
+                                   "tx_prepared_at" "bigint"
+                                   "tx_state" "int"
+                                   "tx_version" "int"})
+
 (defn- get-fullname
   [database container]
   (str database "." container))
@@ -46,6 +60,20 @@
                   (.key (System/getenv "COSMOS_PASSWORD"))
                   (.consistencyLevel ConsistencyLevel/STRONG)
                   .directMode)))
+
+(defn- database-exists?
+  [client database]
+  (try
+    (-> (.getDatabase client database) .read nil? not)
+    (catch Exception _ false)))
+
+(defn- container-exists?
+  [client database container]
+  (try
+    (-> (.getDatabase client database)
+        (.getContainer container)
+        .read nil? not)
+    (catch Exception _ false)))
 
 (defn create-database
   [client database]
@@ -72,13 +100,15 @@
 
 (defn create-metadata
   [client schema]
-  (create-database client METADATA_DATABASE)
+  (when-not (database-exists? client METADATA_DATABASE)
+    (create-database client METADATA_DATABASE))
+  (when-not (container-exists? client METADATA_DATABASE METADATA_CONTAINER)
+    (create-container client METADATA_DATABASE METADATA_CONTAINER 400))
   (let [metadata (doto (TableMetadata.)
                    (.setId (get-fullname (:database schema) (:table schema)))
                    (.setPartitionKeyNames (:partition-key schema))
                    (.setClusteringKeyNames (:clustering-key schema))
                    (.setColumns (:columns schema)))]
-    (create-container client METADATA_DATABASE METADATA_CONTAINER 400)
     (-> (.getDatabase client METADATA_DATABASE)
         (.getContainer METADATA_CONTAINER)
         (.createItem metadata))))
@@ -97,7 +127,23 @@
   [schema]
   (with-open [client (get-client)]
     (create-metadata client schema)
-    (create-database client (:database schema))
+    (when-not (database-exists? client (:database schema))
+      (create-database client (:database schema)))
     (create-container client (:database schema) (:table schema)
-                      (if (:ru schema) 400 (:ru schema)))
+                      (if (:ru schema) (:ru schema) 400))
     (register-stored-procedures client (:database schema) (:table schema))))
+
+(defn- add-transaction-columns
+  [schema]
+  (let [s (merge (:columns schema) TRANSACTION_METADATA_COLUMNS)]
+    (->> (reduce (fn [m [name type]]
+                   (when-not (or (contains? (:partition-key schema) name)
+                                 (contains? (:clustering-key schema) name))
+                     (assoc m (str "before_" name) type)))
+                 {} s)
+         (merge s))))
+
+(defn create-transaction-table
+  [schema]
+  (create-table (merge schema {:columns (add-transaction-columns schema)}))
+  (create-table COORDINATOR_SCHEMA))
