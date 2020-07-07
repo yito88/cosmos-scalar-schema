@@ -20,9 +20,7 @@
 (def ^:const ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
 
 (def ^:const ^String STORED_PROCEDURE_DIR "stored-procedure/")
-(def ^:const REGISTERED_STORED_PROCEDURES ["putIf.js"
-                                           "putIfNotExists.js"
-                                           "deleteIf.js"])
+(def ^:const REGISTERED_STORED_PROCEDURES ["mutate.js"])
 
 (def SAMPLE_SCHEMA {:database "sample-db"
                     :table "sample-table"
