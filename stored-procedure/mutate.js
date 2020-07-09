@@ -10,7 +10,7 @@ function mutate(num, ...args) {
     DELETE_IF: 3,
   };
   const ERROR_CODE = {
-    NO_MUTATION: 429
+    PRECONDITION_FAILED: 412,
   };
 
   function merge(source, update) {
@@ -49,7 +49,7 @@ function mutate(num, ...args) {
 
             const records = checkQueryResult(mutation, record, reads);
             if (!records.length) {
-              reject(new Error(ERROR_CODE.NO_MUTATION, "no mutation"));
+              reject(new Error(ERROR_CODE.PRECONDITION_FAILED, "no mutation"));
               return;
             }
 
