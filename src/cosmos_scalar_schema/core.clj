@@ -109,17 +109,17 @@
                    (.setColumns (:columns schema)))]
     (-> (.getDatabase client METADATA_DATABASE)
         (.getContainer METADATA_CONTAINER)
-        (.createItem metadata))))
+        (.upsertItem metadata))))
 
 (defn register-stored-procedures
   [client database container]
   (let [scripts (-> client (.getDatabase database) (.getContainer container)
                     .getScripts)]
-    (map #(.createStoredProcedure scripts
-                                  (CosmosStoredProcedureProperties.
-                                   % (slurp (str STORED_PROCEDURE_DIR %)))
-                                  (CosmosStoredProcedureRequestOptions.))
-         REGISTERED_STORED_PROCEDURES)))
+    (mapv #(.createStoredProcedure scripts
+                                   (CosmosStoredProcedureProperties.
+                                    % (slurp (str STORED_PROCEDURE_DIR %)))
+                                   (CosmosStoredProcedureRequestOptions.))
+          REGISTERED_STORED_PROCEDURES)))
 
 (defn create-table
   [schema]
