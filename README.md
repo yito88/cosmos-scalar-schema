@@ -1,5 +1,5 @@
 # Schema Tool for Scalar DB on Cosmos DB
-This tool makes schemas on Cosmos DB for Scalar DB
+This tool makes schemas on Cosmos DB for [Scalar DB](https://github.com/scalar-labs/scalardb).
   - This creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB
 
 # Usage
@@ -12,7 +12,7 @@ $ lein uberjar
 
 ### Create tables
 ```console
-$ java -jar target/cosmos-scalar-schema.jar -u <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -s schema.json [-r BASE_RESOURCE_UNIT]
+$ java -jar target/cosmos-scalar-schema.jar -u <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
   - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each table. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this. By default it's 400.
 
