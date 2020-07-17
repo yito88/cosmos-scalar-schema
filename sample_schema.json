@@ -1,0 +1,38 @@
+{
+  "sample-db.sample-table1": {
+    "transaction": true,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c4"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN"
+    },
+    "ru": 400
+  },
+
+  "sample-db.sample-table2": {
+    "transaction": false,
+    "partition-key": [
+      "c1"
+    ],
+    "clustering-key": [
+      "c3",
+      "c4"
+    ],
+    "columns": {
+      "c1": "INT",
+      "c2": "TEXT",
+      "c3": "INT",
+      "c4": "INT",
+      "c5": "BOOLEAN"
+    },
+    "ru": 800
+  }
+}

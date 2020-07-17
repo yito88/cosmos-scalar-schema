@@ -1,147 +1,26 @@
 (ns cosmos-scalar-schema.core
-  (:import (com.azure.cosmos CosmosClient
-                             CosmosClientBuilder
-                             ConsistencyLevel)
-           (com.azure.cosmos.models CosmosContainerProperties
-                                    CosmosStoredProcedureProperties
-                                    CosmosStoredProcedureRequestOptions
-                                    ExcludedPath
-                                    IncludedPath
-                                    IndexingPolicy
-                                    ThroughputProperties)
-           (com.scalar.db.storage.cosmos TableMetadata)))
+  (:require [clojure.tools.cli :refer [parse-opts]]
+            [cosmos-scalar-schema.schema :as schema])
+  (:gen-class))
 
-(def ^:const ^String METADATA_DATABASE "scalardb")
-(def ^:const ^String METADATA_CONTAINER "metadata")
-(def ^:const ^String METADATA_PARTITION_KEY "/id")
+(def cli-options
+  [["-u" "--uri ACCOUNT_URI" "URI address of your Cosmos DB account"]
+   ["-p" "--password ACCOUNT_PASSWORD" "Password of your Cosmos DB account"]
+   ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
+   ["-r" "--ru" "Base RU for each table. The RU of the coordinator for Scalar DB transaction is specified by this option."
+    :default 400 :parse-fn #(Integer/parseInt %)]
+   ["-D" "--delete-all" "All database will be deleted. If this is enabled, -s option will be ignored."]
+   ["-h" "--help"]])
 
-(def ^:const ^String CONTAINER_PARTITION_KEY "/concatenatedPartitionKey")
-(def ^:const ^String PARTITION_KEY_PATH "/concatenatedPartitionKey/?")
-(def ^:const ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
-
-(def ^:const ^String STORED_PROCEDURE_DIR "stored-procedure/")
-(def ^:const REGISTERED_STORED_PROCEDURES ["mutate.js"])
-
-(def SAMPLE_SCHEMA {:database "sample-db"
-                    :table "sample-table"
-                    :partition-key #{"c1"}
-                    :clustering-key #{"c4"}
-                    :columns {"c1" "int"
-                              "c2" "text"
-                              "c3" "int"
-                              "c4" "int"
-                              "c5" "boolean"}
-                    :ru 400})
-
-(def COORDINATOR_SCHEMA {:database "coordinator"
-                         :table "state"
-                         :partition-key #{"tx_id"}
-                         :clustering-key #{}
-                         :columns {"tx_id" "text"
-                                   "tx_state" "int"
-                                   "tx_created_at" "bigint"}})
-
-(def TRANSACTION_METADATA_COLUMNS {"tx_committed_at" "bigint"
-                                   "tx_id" "text"
-                                   "tx_prepared_at" "bigint"
-                                   "tx_state" "int"
-                                   "tx_version" "int"})
-
-(defn- get-fullname
-  [database container]
-  (str database "." container))
-
-(defn get-client
-  []
-  (.buildClient (doto (CosmosClientBuilder.)
-                  (.endpoint (System/getenv "COSMOS_URI"))
-                  (.key (System/getenv "COSMOS_PASSWORD"))
-                  (.consistencyLevel ConsistencyLevel/STRONG)
-                  .directMode)))
-
-(defn- database-exists?
-  [client database]
-  (try
-    (-> (.getDatabase client database) .read nil? not)
-    (catch Exception _ false)))
-
-(defn- container-exists?
-  [client database container]
-  (try
-    (-> (.getDatabase client database)
-        (.getContainer container)
-        .read nil? not)
-    (catch Exception _ false)))
-
-(defn create-database
-  [client database]
-  (.createDatabaseIfNotExists client database))
-
-(defn- make-container-properties
-  [container]
-  (if (= container METADATA_CONTAINER)
-    (CosmosContainerProperties. container METADATA_PARTITION_KEY)
-    (let [policy (doto (IndexingPolicy.)
-                   (.setIncludedPaths
-                    [(IncludedPath. PARTITION_KEY_PATH)
-                     (IncludedPath. CLUSTERING_KEY_PATH)])
-                   (.setExcludedPaths [(ExcludedPath. "/*")]))]
-      (doto (CosmosContainerProperties. container CONTAINER_PARTITION_KEY)
-        (.setIndexingPolicy policy)))))
-
-(defn create-container
-  [client database container ru]
-  (let [prop (make-container-properties container)
-        throughput-prop (ThroughputProperties/createManualThroughput ru)]
-    (-> (.getDatabase client database)
-        (.createContainerIfNotExists prop throughput-prop))))
-
-(defn create-metadata
-  [client schema]
-  (when-not (database-exists? client METADATA_DATABASE)
-    (create-database client METADATA_DATABASE))
-  (when-not (container-exists? client METADATA_DATABASE METADATA_CONTAINER)
-    (create-container client METADATA_DATABASE METADATA_CONTAINER 400))
-  (let [metadata (doto (TableMetadata.)
-                   (.setId (get-fullname (:database schema) (:table schema)))
-                   (.setPartitionKeyNames (:partition-key schema))
-                   (.setClusteringKeyNames (:clustering-key schema))
-                   (.setColumns (:columns schema)))]
-    (-> (.getDatabase client METADATA_DATABASE)
-        (.getContainer METADATA_CONTAINER)
-        (.upsertItem metadata))))
-
-(defn register-stored-procedures
-  [client database container]
-  (let [scripts (-> client (.getDatabase database) (.getContainer container)
-                    .getScripts)]
-    (mapv #(.createStoredProcedure scripts
-                                   (CosmosStoredProcedureProperties.
-                                    % (slurp (str STORED_PROCEDURE_DIR %)))
-                                   (CosmosStoredProcedureRequestOptions.))
-          REGISTERED_STORED_PROCEDURES)))
-
-(defn create-table
-  [schema]
-  (with-open [client (get-client)]
-    (create-metadata client schema)
-    (when-not (database-exists? client (:database schema))
-      (create-database client (:database schema)))
-    (create-container client (:database schema) (:table schema)
-                      (if (:ru schema) (:ru schema) 400))
-    (register-stored-procedures client (:database schema) (:table schema))))
-
-(defn- add-transaction-columns
-  [schema]
-  (let [s (merge (:columns schema) TRANSACTION_METADATA_COLUMNS)]
-    (->> (reduce (fn [m [name type]]
-                   (when-not (or (contains? (:partition-key schema) name)
-                                 (contains? (:clustering-key schema) name))
-                     (assoc m (str "before_" name) type)))
-                 {} s)
-         (merge s))))
-
-(defn create-transaction-table
-  [schema]
-  (create-table (merge schema {:columns (add-transaction-columns schema)}))
-  (create-table COORDINATOR_SCHEMA))
+(defn -main [& args]
+  (let [{:keys [options summary errors]
+         {:keys [schema-file uri password help]} :options}
+        (parse-opts args cli-options)]
+    (if (or help errors)
+      (do (when (not help)
+            (println (str "ERROR: " errors)))
+          (println summary))
+      (with-open [client (schema/get-client uri password)]
+        (if (:delete-all options)
+          (schema/delete-all client)
+          (schema/create-tables client schema-file options))))))

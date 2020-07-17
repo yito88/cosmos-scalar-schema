@@ -10,7 +10,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
-/* Copied from Scalar DB */
+/* Copied from Scalar DB
+ * https://github.com/scalar-labs/scalardb/blob/master/src/main/java/com/scalar/db/storage/cosmos/TableMetadata.java
+ */
 public class TableMetadata {
   private String id;
   private SortedSet<String> partitionKeyNames;
