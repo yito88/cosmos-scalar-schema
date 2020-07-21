@@ -7,7 +7,7 @@
                  [org.apache.logging.log4j/log4j-core "2.13.3"]
                  [org.slf4j/slf4j-log4j12 "1.7.30"]
                  [cheshire "5.10.0"]
-                 [com.azure/azure-cosmos "4.0.1"]
+                 [com.azure/azure-cosmos "4.1.0"]
                  [com.google.guava/guava "24.1-jre"]]
   :java-source-paths ["java/src"]
   :repl-options {:init-ns cosmos-scalar-schema.schema}

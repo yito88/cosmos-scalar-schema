@@ -21,7 +21,7 @@
 (def ^:const ^String PARTITION_KEY_PATH "/concatenatedPartitionKey/?")
 (def ^:const ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
 
-(def ^:const ^String STORED_PROCEDURE_DIR "stored-procedure/")
+(def ^:const ^String STORED_PROCEDURE_DIR "stored_procedure/")
 (def ^:const REGISTERED_STORED_PROCEDURES ["mutate.js"])
 
 (def COORDINATOR_SCHEMA {:database "coordinator"
