@@ -7,7 +7,7 @@
   [["-u" "--uri ACCOUNT_URI" "URI address of your Cosmos DB account"]
    ["-p" "--password ACCOUNT_PASSWORD" "Password of your Cosmos DB account"]
    ["-f" "--schema-file SCHEMA_JSON" "Schema file"]
-   ["-r" "--ru" "Base RU for each table. The RU of the coordinator for Scalar DB transaction is specified by this option."
+   ["-r" "--ru RESOURCE_UNIT" "Base RU for each table. The RU of the coordinator for Scalar DB transaction is specified by this option."
     :default 400 :parse-fn #(Integer/parseInt %)]
    ["-D" "--delete-all" "All database will be deleted. If this is enabled, -s option will be ignored."]
    ["-h" "--help"]])
