@@ -1,5 +1,6 @@
 (ns cosmos-scalar-schema.schema
   (:require [clojure.tools.logging :as log]
+            [clojure.java.io :as cio]
             [cheshire.core :as cheshire])
   (:import (com.azure.cosmos CosmosClient
                              CosmosClientBuilder
@@ -21,8 +22,7 @@
 (def ^:const ^String PARTITION_KEY_PATH "/concatenatedPartitionKey/?")
 (def ^:const ^String CLUSTERING_KEY_PATH "/clusteringKey/*")
 
-(def ^:const ^String STORED_PROCEDURE_DIR "stored_procedure/")
-(def ^:const REGISTERED_STORED_PROCEDURES ["mutate.js"])
+(def ^:const REGISTERED_STORED_PROCEDURE "mutate.js")
 
 (def COORDINATOR_SCHEMA {:database "coordinator"
                          :table "state"
@@ -102,15 +102,15 @@
         (.getContainer METADATA_CONTAINER)
         (.upsertItem metadata))))
 
-(defn register-stored-procedures
+(defn register-stored-procedure
   [client database container]
   (let [scripts (-> client (.getDatabase database) (.getContainer container)
-                    .getScripts)]
-    (mapv #(.createStoredProcedure scripts
-                                   (CosmosStoredProcedureProperties.
-                                    % (slurp (str STORED_PROCEDURE_DIR %)))
-                                   (CosmosStoredProcedureRequestOptions.))
-          REGISTERED_STORED_PROCEDURES)))
+                    .getScripts)
+        properties (CosmosStoredProcedureProperties.
+                     REGISTERED_STORED_PROCEDURE
+                     (slurp (cio/resource REGISTERED_STORED_PROCEDURE)))]
+    (.createStoredProcedure scripts properties
+                            (CosmosStoredProcedureRequestOptions.))))
 
 (defn create-table
   [client schema {:keys [ru] :or {ru 400}}]
@@ -125,7 +125,7 @@
       (do
         (create-container client database table
                           (if (:ru schema) (:ru schema) ru))
-        (register-stored-procedures client database table)))))
+        (register-stored-procedure client database table)))))
 
 (defn- add-transaction-columns
   [schema]
