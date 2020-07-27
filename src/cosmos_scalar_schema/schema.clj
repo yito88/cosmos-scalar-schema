@@ -64,9 +64,23 @@
         .read nil? not)
     (catch Exception _ false)))
 
+(defn- make-throughput-properties
+  [ru]
+  (if (<= 4000 ru)
+    (ThroughputProperties/createAutoscaledThroughput ru)
+    (ThroughputProperties/createManualThroughput ru)))
+
 (defn create-database
-  [client database]
-  (.createDatabaseIfNotExists client database))
+  [client database ru]
+  (.createDatabaseIfNotExists client database
+                              (make-throughput-properties ru)))
+
+(defn update-throughput
+  [client database ru]
+  (let [db (.getDatabase client database)
+        cur-ru (-> db .readThroughput .getMinThroughput)]
+    (when (< cur-ru ru)
+      (.replaceThroughput db (make-throughput-properties ru)))))
 
 (defn- make-container-properties
   [container]
@@ -81,18 +95,17 @@
         (.setIndexingPolicy policy)))))
 
 (defn create-container
-  [client database container ru]
-  (let [prop (make-container-properties container)
-        throughput-prop (ThroughputProperties/createManualThroughput ru)]
+  [client database container]
+  (let [prop (make-container-properties container)]
     (-> (.getDatabase client database)
-        (.createContainerIfNotExists prop throughput-prop))))
+        (.createContainerIfNotExists prop))))
 
 (defn create-metadata
   [client schema]
   (when-not (database-exists? client METADATA_DATABASE)
-    (create-database client METADATA_DATABASE))
+    (create-database client METADATA_DATABASE 400))
   (when-not (container-exists? client METADATA_DATABASE METADATA_CONTAINER)
-    (create-container client METADATA_DATABASE METADATA_CONTAINER 400))
+    (create-container client METADATA_DATABASE METADATA_CONTAINER))
   (let [metadata (doto (TableMetadata.)
                    (.setId (get-fullname (:database schema) (:table schema)))
                    (.setPartitionKeyNames (:partition-key schema))
@@ -107,24 +120,26 @@
   (let [scripts (-> client (.getDatabase database) (.getContainer container)
                     .getScripts)
         properties (CosmosStoredProcedureProperties.
-                     REGISTERED_STORED_PROCEDURE
-                     (slurp (cio/resource REGISTERED_STORED_PROCEDURE)))]
+                    REGISTERED_STORED_PROCEDURE
+                    (slurp (cio/resource REGISTERED_STORED_PROCEDURE)))]
     (.createStoredProcedure scripts properties
                             (CosmosStoredProcedureRequestOptions.))))
 
 (defn create-table
   [client schema {:keys [ru] :or {ru 400}}]
   (let [database (:database schema)
-        table (:table schema)]
+        table (:table schema)
+        ru (if (:ru schema) (:ru schema) ru)]
     (create-metadata client schema)
     (if (database-exists? client database)
-      (log/warn database "already exists")
-      (create-database client database))
+      (do
+        (update-throughput client database ru)
+        (log/warn database "already exists"))
+      (create-database client database ru))
     (if (container-exists? client database table)
       (log/warn (get-fullname database table) "already exists")
       (do
-        (create-container client database table
-                          (if (:ru schema) (:ru schema) ru))
+        (create-container client database table)
         (register-stored-procedure client database table)))))
 
 (defn- add-transaction-columns

@@ -12,8 +12,7 @@
       "c3": "INT",
       "c4": "INT",
       "c5": "BOOLEAN"
-    },
-    "ru": 400
+    }
   },
 
   "sample-db.sample-table1": {
@@ -30,8 +29,7 @@
       "c3": "INT",
       "c4": "INT",
       "c5": "BOOLEAN"
-    },
-    "ru": 400
+    }
   },
 
   "sample-db.sample-table2": {

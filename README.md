@@ -14,7 +14,7 @@ $ lein uberjar
 ```console
 $ java -jar target/cosmos-scalar-schema.jar -u <YOUR_ACCOUNT_URI> -p <YOUR_ACCOUNT_PASSWORD> -f schema.json [-r BASE_RESOURCE_UNIT]
 ```
-  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each table. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this. By default it's 400.
+  - `-r BASE_RESOURCE_UNIT` is an option. You can specify the RU of each database. The maximum RU in tables in the database will be set. If you don't specify RU of tables, the database RU will be set with this option. When you use transaction function, the RU of the coordinator table of Scalar DB is specified by this option. By default, it's 400.
 
 ### Delete all tables
 ```console
@@ -99,5 +99,5 @@ $ java -jar target/cosmos-scalar-schema.jar -D
                                :ru 1000}
                                {:ru 800})
     ```
-    - RU can be set for each table to set `:ru` in a table configuration. By default, it is 400.
+    - RU of a database is set the maximum `:ru` in the table configurations. By default, it is 400. If `:ru` is greater than or equal to 4000, the RU is auto-scaled (10% - 100% of `:ru`).
     - The RU of the coordinator table can be specified the `:ru` in the second argument.
