@@ -1,3 +1,6 @@
+This tool has been moved to [Scalar DB](https://github.com/scalar-labs/scalardb) repository.
+
+----
 # Schema Tool for Scalar DB on Cosmos DB
 This tool makes schemas on Cosmos DB for [Scalar DB](https://github.com/scalar-labs/scalardb).
   - This creates databases(collections) and tables(containers), also inserts metadata which is required by Scalar DB
